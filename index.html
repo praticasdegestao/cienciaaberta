@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico de Ciência Aberta – Embrapa Mandioca e Fruticultura</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --verde:#00703c; --verde2:#00a859; --azul:#0b4f8a; --azul2:#1c7ed6;
+    --fundo:#f2f6f4; --card:#ffffff; --texto:#1f2d27; --sub:#5b6b63; --borda:#dde6e1;
+    --s1:#1c7ed6; --s2:#0ca678; --s3:#f08c00; --s4:#ae3ec9; --s5:#e8590c; --s6:#1098ad; --s7:#5c7cfa;
+    --n3:#2b8a3e; --n2:#94d82d; --n1:#fcc419; --n0:#fa5252; --na:#adb5bd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--fundo);color:var(--texto);line-height:1.5}
+  header{background:linear-gradient(120deg,var(--verde) 0%,var(--verde2) 45%,var(--azul2) 100%);color:#fff;padding:26px 20px 0;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+  .wrap{max-width:1100px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .logo{width:58px;height:58px;border-radius:14px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:30px;border:2px solid rgba(255,255,255,.35)}
+  header h1{margin:0;font-size:1.55rem;font-weight:700}
+  header .unid{font-size:1rem;opacity:.95;font-weight:500}
+  .tabs{display:flex;gap:6px;margin-top:22px}
+  .tab{border:0;background:rgba(255,255,255,.16);color:#fff;padding:12px 22px;border-radius:12px 12px 0 0;font-size:1rem;font-weight:600;cursor:pointer;transition:.2s}
+  .tab:hover{background:rgba(255,255,255,.28)}
+  .tab.ativa{background:var(--fundo);color:var(--verde)}
+  main{padding:24px 16px 60px}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);padding:22px 24px;margin-bottom:18px;border:1px solid var(--borda)}
+  .intro{border-top:6px solid var(--verde)}
+  .intro p{margin:.5em 0}
+  .nota{font-size:.85rem;color:var(--sub);background:#f6f8f7;border-left:4px solid var(--azul2);padding:10px 14px;border-radius:6px;margin-top:12px}
+  a{color:var(--azul)}
+  .obrig{color:#e03131;font-weight:700}
+  label.campo{display:block;font-weight:600;margin:12px 0 6px}
+  input[type=text],input[type=email],textarea{width:100%;padding:11px 13px;border:1.5px solid var(--borda);border-radius:9px;font-size:.97rem;font-family:inherit;background:#fbfdfc;transition:.15s}
+  input:focus,textarea:focus{outline:none;border-color:var(--verde2);box-shadow:0 0 0 3px rgba(0,168,89,.15);background:#fff}
+  textarea{min-height:90px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  .fixo{padding:11px 13px;border-radius:9px;background:#e6f4ec;color:var(--verde);font-weight:700;border:1.5px dashed #9fd3b5}
+  /* progresso */
+  .stepper{display:flex;gap:6px;margin:6px 0 16px;flex-wrap:wrap}
+  .step{flex:1;min-width:110px;padding:8px 10px;border-radius:10px;background:#e9eeeb;font-size:.78rem;color:var(--sub);cursor:pointer;border:2px solid transparent;transition:.2s}
+  .step b{display:block;font-size:.95rem;color:var(--texto)}
+  .step.feito{background:#e3f6ea}
+  .step.atual{border-color:currentColor;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .barra{height:8px;background:#e1e8e4;border-radius:99px;overflow:hidden;margin-bottom:16px}
+  .barra>div{height:100%;background:linear-gradient(90deg,var(--verde2),var(--azul2));transition:width .3s}
+  /* secoes */
+  .secao-cab{border-radius:14px;padding:20px 24px;color:#fff;margin-bottom:16px}
+  .secao-cab h2{margin:0 0 6px;font-size:1.3rem}
+  .secao-cab p{margin:0;opacity:.95;font-size:.93rem}
+  .q{border-left:5px solid var(--cor,#999)}
+  .q.erro{border-color:#e03131!important;background:#fff5f5}
+  .q h3{margin:0 0 12px;font-size:1rem;font-weight:500}
+  .q h3 strong{color:var(--cor)}
+  .qnum{display:inline-block;background:var(--cor);color:#fff;border-radius:6px;padding:1px 8px;font-size:.78rem;font-weight:700;margin-right:6px}
+  .opcoes{display:grid;gap:8px}
+  .op{display:flex;align-items:center;gap:12px;border:1.5px solid var(--borda);border-radius:10px;padding:9px 12px;cursor:pointer;transition:.15s;background:#fff}
+  .op:hover{border-color:var(--c);background:color-mix(in srgb,var(--c) 7%,#fff)}
+  .op input{accent-color:var(--c);width:18px;height:18px}
+  .op .tag{min-width:48px;text-align:center;font-weight:800;color:#fff;background:var(--c);border-radius:7px;padding:3px 6px;font-size:.85rem}
+  .op.sel{border-color:var(--c);background:color-mix(in srgb,var(--c) 13%,#fff);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 35%,transparent)}
+  .op small{color:var(--sub)}
+  .msgerro{color:#e03131;font-size:.85rem;margin-top:8px;display:none}
+  .q.erro .msgerro{display:block}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .btn{border:0;border-radius:10px;padding:12px 24px;font-size:1rem;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn:disabled{opacity:.55;cursor:wait}
+  .btn-pri{background:var(--verde);color:#fff}.btn-pri:hover{background:#005a30}
+  .btn-sec{background:#e3e9e6;color:var(--texto)}.btn-sec:hover{background:#d3dcd7}
+  .btn-azul{background:var(--azul2);color:#fff}.btn-azul:hover{background:var(--azul)}
+  .btn-sm{padding:8px 14px;font-size:.88rem}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:#1f2d27;color:#fff;padding:14px 22px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);transition:.35s;z-index:99;max-width:90vw}
+  .toast.on{transform:translateX(-50%) translateY(0)}
+  .sucesso{text-align:center;padding:40px 24px}
+  .sucesso .big{font-size:64px}
+  /* resultados */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .kpi{background:#fff;border-radius:14px;padding:18px;border:1px solid var(--borda);border-top:5px solid var(--k)}
+  .kpi .v{font-size:1.9rem;font-weight:800;color:var(--k)}
+  .kpi .l{font-size:.85rem;color:var(--sub)}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .toolbar select{padding:9px 12px;border-radius:9px;border:1.5px solid var(--borda);font-size:.95rem;min-width:240px}
+  h2.tit{font-size:1.15rem;margin:0 0 14px;color:var(--verde)}
+  .barras .linha{display:grid;grid-template-columns:260px 1fr 70px;gap:12px;align-items:center;margin:9px 0;font-size:.9rem}
+  .trilho{background:#eef2f0;border-radius:99px;height:20px;overflow:hidden}
+  .trilho>div{height:100%;border-radius:99px;transition:width .6s}
+  .barras .val{font-weight:700;text-align:right}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  th,td{padding:9px 8px;border-bottom:1px solid var(--borda);text-align:left;vertical-align:top}
+  th{background:#f4f8f6;font-weight:700;color:var(--sub);font-size:.78rem;text-transform:uppercase;letter-spacing:.02em}
+  td.cel{text-align:center;font-weight:700;border-radius:6px}
+  .scroll{overflow-x:auto}
+  .legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--sub);margin-top:10px}
+  .legenda span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:-1px}
+  .resp{border-left:6px solid var(--verde2)}
+  .resp-cab{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap}
+  .resp-cab h3{margin:0;font-size:1.08rem}
+  .resp-cab .meta{font-size:.83rem;color:var(--sub)}
+  .selo{padding:5px 12px;border-radius:99px;font-weight:800;color:#fff;font-size:.88rem;white-space:nowrap}
+  .resp-corpo{display:none;margin-top:16px}
+  .resp.aberto .resp-corpo{display:block}
+  .seta{transition:.2s;display:inline-block}
+  .resp.aberto .seta{transform:rotate(90deg)}
+  .sec-res{margin:14px 0 6px;padding:8px 12px;border-radius:8px;color:#fff;font-weight:700;display:flex;justify-content:space-between}
+  .pill{display:inline-block;min-width:40px;text-align:center;border-radius:6px;color:#fff;font-weight:800;padding:2px 6px;font-size:.82rem}
+  .aberta{background:#f7faf8;border-radius:8px;padding:10px 12px;margin:6px 0;font-size:.9rem;white-space:pre-wrap}
+  .aberta b{display:block;font-size:.8rem;color:var(--sub);margin-bottom:3px;white-space:normal}
+  .vazio{text-align:center;color:var(--sub);padding:40px}
+  .spinner{width:34px;height:34px;border:4px solid #dfe7e3;border-top-color:var(--verde2);border-radius:50%;animation:gira 1s linear infinite;margin:20px auto}
+  @keyframes gira{to{transform:rotate(360deg)}}
+  footer{text-align:center;color:var(--sub);font-size:.8rem;padding:20px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.barras .linha{grid-template-columns:1fr 60px}.barras .linha .trilho{grid-column:1/3;grid-row:2}header h1{font-size:1.2rem}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">🔬</div>
+      <div>
+        <h1>Diagnóstico de Ciência Aberta nas Unidades da Embrapa</h1>
+        <div class="unid">🌱 Embrapa Mandioca e Fruticultura · Cruz das Almas (BA)</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab ativa" data-aba="form">📝 Formulário</button>
+      <button class="tab" data-aba="res">📊 Resultados da pesquisa</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ===================== ABA FORMULÁRIO ===================== -->
+  <section id="aba-form">
+    <div class="card intro" id="cabecalho">
+      <h2 style="margin-top:0;color:var(--verde)">Diagnóstico de Ciência Aberta nas Unidades da Embrapa</h2>
+      <p>Conduzido pela Gerência-Adjunta de Dados e Informação, no âmbito da Gerência-Geral de Governança Corporativa e Informação (GCI), este diagnóstico tem como objetivo geral mapear e avaliar o grau de desenvolvimento e institucionalização da Ciência Aberta nas Unidades da Embrapa, identificando capacidades, práticas, infraestruturas, experiências, barreiras e lacunas, de modo a subsidiar o planejamento, a implementação e o monitoramento de uma agenda institucional de fortalecimento da Ciência Aberta.</p>
+      <p>Todas as Unidades Descentralizadas serão respondentes do diagnóstico, que está organizado em seções com perguntas objetivas de preenchimento obrigatório e 2 (duas) perguntas abertas de preenchimento opcional.</p>
+      <p>Deverá ser submetido <strong>um único diagnóstico por Unidade</strong>, que deve ser preenchido pelo Comitê Local de Dados e Informação (CL-DIC), de forma a garantir uma visão transversal sobre pesquisa, gestão de dados, PD&amp;I e gestão institucional, assegurando uma compreensão abrangente das práticas e capacidades locais.</p>
+      <p>Em caso de dúvidas sobre conceitos, valores, princípios e dimensões relativas à Ciência Aberta, consulte o documento da Unesco – <a href="https://unesdoc.unesco.org/ark:/48223/pf0000379949_por" target="_blank" rel="noopener">Recomendação da Unesco sobre Ciência Aberta</a> (Unesco, 2021, p. 6) – que foi utilizado como referência para a construção deste diagnóstico.</p>
+      <p><strong>Bom trabalho!</strong><br>Qualquer dúvida enviar e-mail para <a href="mailto:gci.gadi@embrapa.br">gci.gadi@embrapa.br</a>.</p>
+      <div class="nota"><strong>Nota metodológica e de transparência:</strong> A elaboração deste questionário e a geração de seu código-fonte de automação contaram com o apoio da ferramenta de IA Gemini Pro (Google), utilizada no refinamento instrucional das perguntas a partir da Recomendação sobre Ciência Aberta da UNESCO (Unesco, 2021) e do UNESCO Open Science Toolkit (Toolkit, 2023), adaptando-os à realidade institucional da Embrapa e suas Unidades.</div>
+      <p style="font-size:.85rem;color:#e03131;margin-bottom:0">* Indica uma pergunta obrigatória</p>
+    </div>
+
+    <div id="area-form">
+      <div class="stepper" id="stepper"></div>
+      <div class="barra"><div id="progresso" style="width:0"></div></div>
+      <div id="paginas"></div>
+    </div>
+
+    <div class="card sucesso" id="tela-sucesso" style="display:none">
+      <div class="big">✅</div>
+      <h2 style="color:var(--verde)">Resposta registrada com sucesso!</h2>
+      <p>Obrigado pela participação. Você pode consultar o resultado na aba <strong>Resultados da pesquisa</strong>.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-azul" onclick="irAba('res')">📊 Ver resultados</button>
+        <button class="btn btn-sec" onclick="novaResposta()">📝 Enviar outra resposta</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ABA RESULTADOS ===================== -->
+  <section id="aba-res" style="display:none">
+    <div class="toolbar">
+      <button class="btn btn-pri btn-sm" onclick="carregarResultados()">🔄 Atualizar</button>
+      <select id="filtro-resp" onchange="renderResultados()"><option value="">👥 Todos os respondentes</option></select>
+      <button class="btn btn-sec btn-sm" onclick="exportarCSV()">⬇️ Exportar CSV</button>
+      <span id="atualizado" style="font-size:.82rem;color:var(--sub)"></span>
+    </div>
+    <div id="resultados"><div class="spinner"></div></div>
+  </section>
+</main>
+<footer>Embrapa Mandioca e Fruticultura · Diagnóstico de Ciência Aberta (referência: Recomendação da Unesco sobre Ciência Aberta, 2021)</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================== CONFIGURAÇÃO SUPABASE ==================== */
+const SUPABASE_URL = "https://eoxiftayhkuulbkxrjth.supabase.co";
+const SUPABASE_KEY = "sb_publishable_WKHl02a-5Ak2FudIZqJ-cw_D1Pu_o34";
+const TABELA = "respostas_ciencia_aberta";
+const UNIDADE = "Embrapa Mandioca e Fruticultura";
+let sb = null;
+try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){ console.error(e); }
+
+/* ==================== ESCALA ==================== */
+const ESCALA = [
+  {v:"3",  t:"3",   r:"Plenamente implementado", d:"Ação já está incorporada à rotina da Unidade", c:"var(--n3)"},
+  {v:"2",  t:"2",   r:"Em implementação", d:"Ações iniciais já começaram, mas não estão consolidadas", c:"var(--n2)"},
+  {v:"1",  t:"1",   r:"Em planejamento", d:"Não implementado, mas há um cronograma ou plano de ação", c:"var(--n1)"},
+  {v:"0",  t:"0",   r:"Sem ação", d:"Não há planejamento atual para incorporar", c:"var(--n0)"},
+  {v:"NA", t:"N/A", r:"Não se aplica", d:"Não é competência direta desta Unidade", c:"var(--na)"}
+];
+
+/* ==================== QUESTIONÁRIO (conteúdo e ordem do original) ==================== */
+const SECOES = [
+ {id:"s1", cor:"var(--s1)", curto:"Entendimento comum",
+  titulo:"Promoção de um entendimento comum da Ciência Aberta",
+  desc:"Segundo a Unesco, o entendimento comum da Ciência Aberta busca alinhar a comunidade científica em torno de práticas acessíveis, transparentes e equitativas, consolidando o conhecimento — especialmente o financiado com recursos públicos — como um bem comum. Na prática, esse princípio envolve garantir o licenciamento aberto de publicações, dados e tecnologias, valorizar a diversidade de formatos, idiomas e saberes tradicionais, e manter um diálogo transparente com a sociedade e o setor privado sobre desafios como propriedade intelectual, privacidade e segurança.",
+  qs:[
+   ["Entendimento comum","A Unidade promove e apoia o entendimento comum da Ciência Aberta e implementa ações de conscientização interna, respeitando a diversidade de abordagens (diferenças entre áreas de pesquisa, sensibilidade e proteção de dados, diferentes níveis de maturidade e infraestrutura, entre outros fatores)?"],
+   ["Pesquisa com financiamento público","A Unidade assegura que as pesquisas financiadas com recursos públicos sigam os princípios da Ciência Aberta e que o conhecimento gerado (publicações, dados, software e hardware) seja licenciado de forma aberta ou dedicado ao domínio público?"],
+   ["Diversidade de publicações (bibliodiversidade)","A Unidade incentiva a publicação de resultados em uma diversidade de formatos (como artigos científicos em acesso aberto, preprints e produtos editoriais previstos no Manual de Produção Editorial da Embrapa) e apoia o uso de repositórios e revistas científicas não comerciais, reduzindo a dependência exclusiva de editoras que cobram altas taxas?"],
+   ["Multilinguismo","A Unidade incentiva o multilinguismo na prática da ciência e nas comunicações acadêmicas?"],
+   ["Comunicação científica","A Unidade aprimora a comunicação da Ciência Aberta para apoiar a disseminação do conhecimento para pesquisadores de outras áreas, tomadores de decisão e o público em geral?"],
+   ["Engajamento com o setor privado","A Unidade promove o diálogo e envolve atores do setor privado (como agtechs, cooperativas e empresas) em debates sobre como os princípios e prioridades da Ciência Aberta podem ser ampliados e compartilhados de forma mutuamente benéfica?"],
+   ["Discussões multissetoriais","A Unidade promove discussões abertas sobre os benefícios e os desafios da Ciência Aberta (como concorrência, obtenção e exploração de dados por tecnologias mais avançadas, vínculos com os direitos de propriedade intelectual, privacidade, segurança e desigualdades entre as pesquisa com financiamento público e privado)?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas já consolidadas que promovam o entendimento comum da Ciência Aberta em sua Unidade.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade para promover o entendimento comum da Ciência Aberta.",false]
+  ]},
+ {id:"s2", cor:"var(--s2)", curto:"Ambiente interno",
+  titulo:"Desenvolvimento de um ambiente interno favorável à Ciência Aberta",
+  desc:"Segundo a Unesco, trata-se de criar condições que incentivem efetivamente as práticas de Ciência Aberta entre as equipes. Isso exige um processo transparente e participativo, construído por meio do diálogo entre a gestão, as diferentes partes interessadas e a comunidade científica da Unidade — com atenção especial ao engajamento dos pesquisadores em início de carreira.",
+  qs:[
+   ["Ambiente e cultura local","A Unidade incentiva as práticas de Ciência Aberta por meio da aplicação da política e dos normativos relativos à governança e gestão de dados e informação, demonstrando às equipes como os princípios e as diretrizes corporativas já convergem para essas práticas?"],
+   ["Adesão a marcos legais","A gestão local garante que os projetos e repositórios locais da Unidade, caso existam, cumpram as políticas e normativos corporativos que contenham princípios, diretrizes e orientações voltados para Ciência Aberta e respeitem os marcos legais vigentes (como LGPD, Marco Legal de CT&I e Lei de Direitos Autorais)?"],
+   ["Alinhamento estratégico","As iniciativas de Ciência Aberta da Unidade seguem as diretrizes corporativas centrais da Embrapa e adotam padrões internacionais (como os princípios FAIR), garantindo a integração com redes de pesquisa externas e evitando a criação de sistemas isolados?"],
+   ["Ciência cidadã e participativa","A Unidade fomenta a inclusão de práticas de ciência cidadã e participativa em seus projetos, engajando a sociedade civil e o setor produtivo no processo científico?"],
+   ["Coprodução de conhecimento","A Unidade estimula modelos de pesquisa que permitem a coprodução de conhecimento com múltiplos atores (produtores rurais, startups, cooperativas), reconhecendo o valor dessas colaborações?"],
+   ["Avaliação e incentivo local","A gestão da Unidade valoriza o esforço em Ciência Aberta (como curadoria de dados e compartilhamento de códigos) e reconhece a diversidade de resultados além de publicações tradicionais na hora de avaliar e incentivar seus pesquisadores?"],
+   ["Parcerias público-privadas","A Unidade articula parcerias com o setor privado garantindo os princípios de abertura, protegendo os interesses públicos e evitando exclusividade indevida ou bloqueios tecnológicos?"],
+   ["Gestão de recursos","A Unidade prevê, em seu planejamento e orçamento local, a alocação de recursos (esforço da equipe, infraestrutura de TI ou finanças) para viabilizar e manter as práticas de Ciência Aberta?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas já consolidadas na sua Unidade que promovam um ambiente interno favorável à Ciência Aberta.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade para consolidar um ambiente interno favorável à Ciência Aberta.",false]
+  ]},
+ {id:"s3", cor:"var(--s3)", curto:"Capacitação",
+  titulo:"Investimento em recursos humanos, capacitação e letramento digital",
+  desc:"Segundo a Unesco, a transição para a Ciência Aberta exige investimentos contínuos na formação do capital humano. Isso significa preparar os pesquisadores e equipes técnicas para os desafios e oportunidades da era digital, promovendo ações de educação e treinamento fáceis e direcionadas — que contemplem tanto o domínio das novas tecnologias e ferramentas quanto a absorção dos princípios éticos, culturais e práticos da Ciência Aberta.",
+  qs:[
+   ["Capacitação contínua","A Unidade fornece capacitação sistemática e contínua em conceitos de Ciência Aberta, gestão e curadoria de dados, segurança na <em>web</em>, propriedade e compartilhamento de conteúdo e letramento informacional?"],
+   ["Profissionalização em ciência de dados","A Unidade investe na educação avançada e na profissionalização de curadores e gestores de dados?"],
+   ["Recursos Educacionais Abertos (REA)","A Unidade incentiva a produção e o uso de Recursos Educacionais Abertos (como manuais, guias de capacitação, cursos digitais e materiais instrucionais sob licenças abertas) que qualquer pessoa possa acessar, usar, adaptar e redistribuir gratuitamente, facilitando o treinamento das equipes e a democratização do conhecimento gerado?"],
+   ["Divulgação científica e combate à desinformação","A Unidade estimula a divulgação científica (popularização da ciência) para além da comunidade científica e técnica por múltiplos canais (como mídias sociais, jornalismo científico e palestras abertas), assegurando o rigor e a transparência na citação das fontes originais para fortalecer a confiança pública na ciência e combater a desinformação?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas já consolidadas na sua Unidade que promovam a capacitação e o desenvolvimento de competências em Ciência Aberta.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade em relação à capacitação, formação técnica ou desenvolvimento de habilidades em Ciência Aberta.",false]
+  ]},
+ {id:"s4", cor:"var(--s4)", curto:"Cultura e incentivos",
+  titulo:"Promoção de uma cultura de Ciência Aberta e alinhamento de incentivos para as práticas voltadas à Ciência Aberta",
+  desc:"Segundo a Unesco, para que a Ciência Aberta se torne uma realidade, é preciso remover as barreiras nos sistemas de avaliação de desempenho e passar a reconhecer e recompensar as boas práticas abertas na progressão de carreira das equipes. Simultaneamente, a instituição deve agir para mitigar os riscos e consequências negativas desse modelo, protegendo seus pesquisadores e ativos contra revistas predatórias, altos custos de publicação (taxas de processamento de artigos - APCs), uso indevido de dados e a perda de propriedade intelectual.",
+  qs:[
+   ["Remoção de barreiras e avaliação","A Unidade atua ativamente para remover barreiras à Ciência Aberta, revisando critérios internos de avaliação de empregados e recompensando boas práticas?"],
+   ["Valoração da pesquisa e diversidade de resultados","A Unidade reconhece e valoriza a diversidade de entregas da Ciência Aberta — como dados abertos, avaliação por pares aberta, preprints, softwares e códigos-fonte abertos, influência em políticas públicas e inovação aberta com a sociedade —, indo além das métricas tradicionais de contagem de artigos e fatores de impacto de revistas?"],
+   ["Requisitos de acesso aberto","A Unidade adota como critério de reconhecimento institucional o esforço do empregado em realizar entregas de acesso aberto (abrangendo publicações, conjuntos de dados, códigos e hardwares abertos)?"],
+   ["Proteção e exceções de propriedade intelectual","A Unidade promove o licenciamento aberto e exceções de propriedade intelectual que facilitem o uso educacional e científico de seus ativos, assegurando a ampla distribuição do conhecimento mediante a correta citação e atribuição de autoria?"],
+   ["Combate à má conduta","A Unidade explora as práticas de Ciência Aberta para reduzir e prevenir má conduta científica (fabricação de resultados, plágio, privatização indevida)?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas já consolidadas na sua Unidade (ex: uso de licenças abertas, valorização de dados e softwares nas avaliações locais, fomento à colaboração) que promovam a cultura de Ciência Aberta e reconheçam o esforço dos pesquisadores.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade em relação à mudança da cultura de avaliação",true]
+  ]},
+ {id:"s5", cor:"var(--s5)", curto:"Abordagens inovadoras",
+  titulo:"Promoção de abordagens inovadoras para Ciência Aberta em diferentes estágios da pesquisa",
+  desc:"Segundo a Unesco, a Ciência Aberta não se limita à entrega final. Ela exige uma mudança estrutural, cultural e metodológica que abrange todo o ciclo da pesquisa: desde a formulação da hipótese, coleta e gestão de dados, até a avaliação por pares, comunicação e reutilização dos resultados. Como esse cenário está em constante evolução, a instituição deve estar preparada para estimular e adotar abordagens inovadoras de abertura do início ao fim do processo científico.",
+  qs:[
+   ["Revisão por pares aberta","A Unidade promove práticas de revisão por pares aberta (<em>open peer review</em>), incluindo a possibilidade de identidades abertas dos revisores?"],
+   ["Publicação de resultados negativos","A Unidade encoraja e valoriza o compartilhamento de dados e resultados científicos negativos, entendendo que contribuem para o avanço da ciência?"],
+   ["Preservação de dados","A Unidade possui estratégias para facilitar o depósito, curadoria e preservação de dados para torná-los reutilizáveis?"],
+   ["Espaços híbridos de colaboração interdisciplinar","A Unidade estimula a criação de espaços onde pesquisadores de diferentes campos interagem de forma transdisciplinar com desenvolvedores de softwares, codificadores, criadores, inovadores e engenheiros, entre outros?"],
+   ["Inovação aberta","A Unidade conecta as práticas de Ciência Aberta à inovação aberta, visando o desenvolvimento mais rápido de descobertas?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas já adotadas na sua Unidade (ex: uso de preprints, cadernos abertos de laboratório, avaliação por pares aberta, abertura de protocolos e códigos antes da publicação) que promovam a transparência e a inovação desde o início do ciclo de pesquisa.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade para a adoção de práticas abertas nas fases iniciais da pesquisa (ex: receio de perda de inédito/propriedade intelectual, desconhecimento sobre preprints, falta de infraestrutura ou fluxos definidos).",false]
+  ]},
+ {id:"s6", cor:"var(--s6)", curto:"Cooperação",
+  titulo:"Promoção da cooperação internacional e multissetorial",
+  desc:"Segundo a Unesco, a consolidação da Ciência Aberta exige o reforço da colaboração internacional — bilateral e multilateral — entre todos os atores do ecossistema científico. A Unidade deve reconhecer e valorizar as iniciativas em andamento, unindo forças entre as redes de pesquisa e a sociedade para potencializar os benefícios da ciência para o desenvolvimento sustentável global.",
+  qs:[
+   ["Cooperação internacional","A Unidade incentiva a colaboração científica internacional e transfronteiriça como prática essencial da Ciência Aberta, promovendo o intercâmbio de conhecimentos, o uso compartilhado de infraestruturas abertas e integrando ações de transferência de tecnologia e capacitação conjunta?"],
+   ["Acesso universal","A Unidade une esforços para promover acesso universal aos resultados científicos, independentemente de geografia, gênero ou circunstâncias socioeconômicas?"],
+   ["Redes colaborativas","A Unidade apoia redes para troca de boas práticas e busca estabelecer mecanismos de financiamento regionais/nacionais/internacionais?"],
+   ["Métricas internacionais","A Unidade colabora na formulação de métricas internacionais padronizadas para Ciência Aberta?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas já consolidadas na sua Unidade (ex: projetos de cooperação transfronteiriça, uso de repositórios/infraestruturas compartilhadas com instituições estrangeiras, acordos multissetoriais ou redes globais de P&D) que promovam o intercâmbio aberto de conhecimentos e a transferência de tecnologia.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade para o fortalecimento da cooperação internacional em Ciência Aberta (ex: barreiras operacionais/jurídicas para compartilhamento de dados com parceiros externos, assimetrias tecnológicas, falta de diretrizes de governança transfronteiriça).",false]
+  ]},
+ {id:"s7", cor:"var(--s7)", curto:"Monitoramento",
+  titulo:"Monitoramento",
+  desc:"Segundo a Unesco, a consolidação da Ciência Aberta exige o acompanhamento contínuo e estruturado de suas políticas e iniciativas. É necessário adotar um mecanismo de monitoramento que combine abordagens quantitativas e qualitativas, permitindo avaliar o avanço real das práticas abertas, mensurar seus impactos na pesquisa e orientar a tomada de decisão estratégica conforme a realidade da Unidade.",
+  qs:[
+   ["Mecanismos de monitoramento","A Unidade aplica metodologias para monitorar práticas de incentivos à Ciência Aberta, medindo a eficiência em relação a objetivos?"]
+  ],
+  abertas:[
+   ["Cite até 2 iniciativas ou mecanismos já utilizados na sua Unidade (ex: indicadores de dados abertos/softwares abertos, acompanhamento de projetos com plano de gestão de dados) para monitorar e mensurar a adoção das práticas de Ciência Aberta.",false],
+   ["Cite até 2 desafios ou gargalos na sua Unidade em relação ao monitoramento e à coleta de dados sobre Ciência Aberta (ex: falta de ferramentas automatizadas de acompanhamento, ausência de indicadores consolidados pela Sede, sobrecarga na prestação de contas).",false]
+  ]}
+];
+const ABERTA_CHAVES = ["iniciativas","desafios"];
+const TOTAL_PAG = SECOES.length + 1; // página 0 = identificação
+
+/* ==================== UTILITÁRIOS ==================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const semTags = s => s.replace(/<[^>]+>/g,"");
+function toast(msg, ms=3500){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("on"),ms); }
+function nivel(p){
+  if(p===null||p===undefined||isNaN(p)) return {n:"Sem dados", c:"var(--na)"};
+  if(p>=75) return {n:"Avançado", c:"var(--n3)"};
+  if(p>=50) return {n:"Intermediário", c:"#5c940d"};
+  if(p>=25) return {n:"Inicial", c:"#f08c00"};
+  return {n:"Incipiente", c:"var(--n0)"};
+}
+function corValor(v){ const e=ESCALA.find(x=>x.v===String(v)); return e?e.c:"#ced4da"; }
+function rotuloValor(v){ const e=ESCALA.find(x=>x.v===String(v)); return e?e.t:"–"; }
+function fmt(p){ return (p===null||p===undefined||isNaN(p)) ? "–" : p.toFixed(1).replace(".",",")+"%"; }
+
+/* ==================== MONTAGEM DO FORMULÁRIO ==================== */
+let pagina = 0;
+function montarFormulario(){
+  // stepper
+  const st = [`<div class="step" data-p="0" style="color:var(--verde)"><b>Início</b>Identificação</div>`]
+    .concat(SECOES.map((s,i)=>`<div class="step" data-p="${i+1}" style="color:${s.cor}"><b>${i+1}. ${s.curto}</b>Seção ${i+1} de ${SECOES.length}</div>`));
+  $("#stepper").innerHTML = st.join("");
+  document.querySelectorAll(".step").forEach(el=>el.onclick=()=>{ const p=+el.dataset.p; if(p<=pagina || validarAte(p-1,false)) mostrarPagina(p); });
+
+  let h = `<div class="pag" data-p="0">
+    <div class="secao-cab" style="background:linear-gradient(120deg,var(--verde),var(--verde2))"><h2>👤 Identificação</h2><p>Informe seus dados para registrar a resposta.</p></div>
+    <div class="card q" style="--cor:var(--verde)">
+      <label class="campo">Unidade</label><div class="fixo">🏢 ${UNIDADE}</div>
+      <div class="grid2">
+        <div><label class="campo" for="nome">Nome do respondente <span class="obrig">*</span></label>
+          <input type="text" id="nome" maxlength="150" placeholder="Nome completo" autocomplete="name"></div>
+        <div><label class="campo" for="email">E-mail institucional</label>
+          <input type="email" id="email" maxlength="150" placeholder="nome.sobrenome@embrapa.br" autocomplete="email"></div>
+      </div>
+      <label class="campo" for="funcao">Função / área de atuação no CL-DIC</label>
+      <input type="text" id="funcao" maxlength="150" placeholder="Ex.: Pesquisador(a), Analista, Chefia, Membro do CL-DIC">
+      <div class="msgerro" id="erro-nome">Informe o nome do respondente (mínimo de 3 caracteres).</div>
+    </div>
+    <div class="nav"><span></span><button class="btn btn-pri" onclick="avancar()">Avançar ➜</button></div>
+  </div>`;
+
+  let n = 0;
+  SECOES.forEach((s,i)=>{
+    h += `<div class="pag" data-p="${i+1}" style="display:none">
+      <div class="secao-cab" style="background:${s.cor}"><h2>${i+1}. ${s.titulo}</h2><p>${s.desc}</p></div>`;
+    s.qs.forEach((q,j)=>{
+      n++;
+      const nome = `${s.id}_q${j+1}`;
+      h += `<div class="card q" id="box-${nome}" style="--cor:${s.cor}">
+        <h3><span class="qnum">Q${n}</span><strong>${q[0]}:</strong> ${q[1]} <span class="obrig">*</span></h3>
+        <div class="opcoes">${ESCALA.map(e=>`
+          <label class="op" style="--c:${e.c}"><input type="radio" name="${nome}" value="${e.v}">
+            <span class="tag">${e.t}</span><span><strong>${e.r}</strong> <small>(${e.d})</small></span></label>`).join("")}
+        </div><div class="msgerro">Esta pergunta é obrigatória.</div></div>`;
+    });
+    s.abertas.forEach((a,k)=>{
+      const nome = `${s.id}_${ABERTA_CHAVES[k]}`;
+      h += `<div class="card q" id="box-${nome}" style="--cor:${s.cor}">
+        <h3>${k===0?"💡":"⚠️"} ${esc(a[0])} ${a[1]?'<span class="obrig">*</span>':''}</h3>
+        <textarea id="${nome}" ${a[1]?'data-obrig="1"':''} maxlength="3000" placeholder="Sua resposta"></textarea>
+        <div class="msgerro">Esta pergunta é obrigatória.</div></div>`;
+    });
+    const ult = i===SECOES.length-1;
+    h += `<div class="nav"><button class="btn btn-sec" onclick="voltar()">⬅ Voltar</button>
+      ${ult ? `<button class="btn btn-pri" id="btn-enviar" onclick="enviar()">📨 Enviar respostas</button>`
+            : `<button class="btn btn-pri" onclick="avancar()">Avançar ➜</button>`}</div>
+      <p style="text-align:center;color:var(--sub);font-size:.85rem">Página ${i+2} de ${TOTAL_PAG}</p></div>`;
+  });
+  $("#paginas").innerHTML = h;
+
+  document.querySelectorAll(".op input").forEach(inp=>inp.addEventListener("change",()=>{
+    document.querySelectorAll(`input[name="${inp.name}"]`).forEach(o=>o.closest(".op").classList.toggle("sel",o.checked));
+    $("#box-"+inp.name).classList.remove("erro"); salvarRascunho();
+  }));
+  document.querySelectorAll("#paginas textarea, #paginas input[type=text], #paginas input[type=email]").forEach(el=>el.addEventListener("input",()=>{
+    el.closest(".q")?.classList.remove("erro"); salvarRascunho();
+  }));
+  restaurarRascunho();
+  mostrarPagina(0);
+}
+
+function mostrarPagina(p){
+  pagina = p;
+  document.querySelectorAll(".pag").forEach(el=>el.style.display = (+el.dataset.p===p)?"":"none");
+  document.querySelectorAll(".step").forEach(el=>{ const sp=+el.dataset.p; el.classList.toggle("atual",sp===p); el.classList.toggle("feito",sp<p); });
+  $("#progresso").style.width = (p/(TOTAL_PAG-1)*100)+"%";
+  window.scrollTo({top: $("#area-form").offsetTop-10, behavior:"smooth"});
+}
+
+function validarPagina(p, marcar=true){
+  let ok = true, primeiro=null;
+  if(p===0){
+    const v = $("#nome").value.trim();
+    const bad = v.length<3;
+    if(marcar){ $("#nome").closest(".q").classList.toggle("erro",bad); }
+    if(bad){ ok=false; primeiro=$("#nome"); }
+    return {ok, primeiro};
+  }
+  const s = SECOES[p-1];
+  s.qs.forEach((q,j)=>{
+    const nome=`${s.id}_q${j+1}`;
+    const marcado = document.querySelector(`input[name="${nome}"]:checked`);
+    if(!marcado){ ok=false; if(marcar) $("#box-"+nome).classList.add("erro"); primeiro = primeiro || $("#box-"+nome); }
+  });
+  s.abertas.forEach((a,k)=>{
+    if(!a[1]) return;
+    const nome=`${s.id}_${ABERTA_CHAVES[k]}`;
+    if(!$("#"+nome).value.trim()){ ok=false; if(marcar) $("#box-"+nome).classList.add("erro"); primeiro = primeiro || $("#box-"+nome); }
+  });
+  return {ok, primeiro};
+}
+function validarAte(p, marcar){ for(let i=0;i<=p;i++){ if(!validarPagina(i,false).ok){ if(marcar) mostrarPagina(i); return false; } } return true; }
+
+function avancar(){
+  const r = validarPagina(pagina);
+  if(!r.ok){ toast("⚠️ Responda as perguntas obrigatórias desta seção."); r.primeiro?.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  mostrarPagina(Math.min(pagina+1, TOTAL_PAG-1));
+}
+function voltar(){ mostrarPagina(Math.max(pagina-1,0)); }
+
+/* ==================== CÁLCULO DE ÍNDICES ==================== */
+function calcularIndices(escala){
+  const idx = {}; let soma=0, cont=0;
+  SECOES.forEach(s=>{
+    let ss=0, cc=0;
+    s.qs.forEach((q,j)=>{ const v=escala[`${s.id}_q${j+1}`]; if(v!==undefined && v!=="NA" && v!==null){ ss+=+v; cc++; } });
+    idx[s.id] = cc? +(ss/(cc*3)*100).toFixed(1) : null;
+    soma+=ss; cont+=cc;
+  });
+  return {idx, geral: cont? +(soma/(cont*3)*100).toFixed(1) : null};
+}
+
+/* ==================== ENVIO ==================== */
+async function enviar(){
+  for(let p=0;p<TOTAL_PAG;p++){
+    const r = validarPagina(p);
+    if(!r.ok){ mostrarPagina(p); setTimeout(()=>r.primeiro?.scrollIntoView({behavior:"smooth",block:"center"}),350); toast("⚠️ Há perguntas obrigatórias sem resposta."); return; }
+  }
+  const escala = {}, abertas = {};
+  SECOES.forEach(s=>{
+    s.qs.forEach((q,j)=>{ const n=`${s.id}_q${j+1}`; escala[n]=document.querySelector(`input[name="${n}"]:checked`).value; });
+    ABERTA_CHAVES.forEach(k=>{ const n=`${s.id}_${k}`; abertas[n]=$("#"+n).value.trim(); });
+  });
+  const {idx, geral} = calcularIndices(escala);
+  const registro = {
+    unidade: UNIDADE,
+    respondente_nome: $("#nome").value.trim(),
+    respondente_email: $("#email").value.trim() || null,
+    respondente_funcao: $("#funcao").value.trim() || null,
+    respostas_escala: escala, respostas_abertas: abertas, indices: idx, indice_geral: geral
+  };
+  if(!sb){ toast("❌ Biblioteca do Supabase não carregou. Verifique a conexão com a internet."); return; }
+  const btn = $("#btn-enviar"); btn.disabled=true; btn.textContent="⏳ Enviando...";
+  const {error} = await sb.from(TABELA).insert(registro);
+  btn.disabled=false; btn.textContent="📨 Enviar respostas";
+  if(error){ console.error(error); toast("❌ Erro ao enviar: "+error.message, 7000); return; }
+  limparRascunho();
+  $("#area-form").style.display="none"; $("#tela-sucesso").style.display="";
+  window.scrollTo({top:0,behavior:"smooth"});
+  dados = null; // força recarga na aba resultados
+}
+function novaResposta(){
+  document.querySelectorAll("#paginas input[type=radio]").forEach(r=>{r.checked=false; r.closest(".op").classList.remove("sel");});
+  document.querySelectorAll("#paginas textarea, #paginas input[type=text], #paginas input[type=email]").forEach(el=>el.value="");
+  $("#tela-sucesso").style.display="none"; $("#area-form").style.display=""; mostrarPagina(0);
+}
+
+/* ==================== RASCUNHO LOCAL (conveniência) ==================== */
+const CHAVE_RASC = "rasc_ca_cnpmf";
+function salvarRascunho(){
+  try{
+    const d={campos:{},radios:{}};
+    document.querySelectorAll("#paginas textarea, #paginas input[type=text], #paginas input[type=email]").forEach(el=>d.campos[el.id]=el.value);
+    document.querySelectorAll("#paginas input[type=radio]:checked").forEach(r=>d.radios[r.name]=r.value);
+    localStorage.setItem(CHAVE_RASC, JSON.stringify(d));
+  }catch(e){}
+}
+function restaurarRascunho(){
+  try{
+    const d=JSON.parse(localStorage.getItem(CHAVE_RASC)||"null"); if(!d) return;
+    Object.entries(d.campos||{}).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
+    Object.entries(d.radios||{}).forEach(([n,v])=>{ const r=document.querySelector(`input[name="${n}"][value="${v}"]`); if(r){ r.checked=true; r.closest(".op").classList.add("sel"); } });
+  }catch(e){}
+}
+function limparRascunho(){ try{ localStorage.removeItem(CHAVE_RASC); }catch(e){} }
+
+/* ==================== RESULTADOS ==================== */
+let dados = null;
+async function carregarResultados(){
+  $("#resultados").innerHTML = '<div class="spinner"></div>';
+  if(!sb){ $("#resultados").innerHTML = '<div class="card vazio">❌ Não foi possível carregar a biblioteca do Supabase.</div>'; return; }
+  const {data, error} = await sb.from(TABELA).select("*").order("created_at",{ascending:false});
+  if(error){ console.error(error); $("#resultados").innerHTML = `<div class="card vazio">❌ Erro ao consultar o banco: ${esc(error.message)}<br><small>Verifique se o script SQL foi executado no Supabase.</small></div>`; return; }
+  dados = data || [];
+  const sel = $("#filtro-resp"), atual = sel.value;
+  sel.innerHTML = '<option value="">👥 Todos os respondentes ('+dados.length+')</option>' +
+    dados.map(r=>`<option value="${r.id}">${esc(r.respondente_nome)} – ${new Date(r.created_at).toLocaleDateString("pt-BR")}</option>`).join("");
+  sel.value = dados.some(r=>String(r.id)===atual) ? atual : "";
+  $("#atualizado").textContent = "Atualizado em " + new Date().toLocaleString("pt-BR");
+  renderResultados();
+}
+
+function idxDe(r){ // recalcula a partir das respostas (garante consistência)
+  return calcularIndices(r.respostas_escala || {});
+}
+
+function renderResultados(){
+  if(!dados) return;
+  const f = $("#filtro-resp").value;
+  const lista = f ? dados.filter(r=>String(r.id)===f) : dados;
+  if(!dados.length){ $("#resultados").innerHTML = '<div class="card vazio">📭 Ainda não há respostas registradas.<br><br><button class="btn btn-pri" onclick="irAba(\'form\')">📝 Responder agora</button></div>'; return; }
+
+  const calc = lista.map(r=>({r, ...idxDe(r)}));
+  const media = arr => { const v=arr.filter(x=>x!==null&&x!==undefined); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; };
+  const geralMed = media(calc.map(c=>c.geral));
+  const porSec = SECOES.map(s=>({s, v: media(calc.map(c=>c.idx[s.id]))}));
+  const validas = porSec.filter(x=>x.v!==null);
+  const forte = validas.length? validas.reduce((a,b)=>b.v>a.v?b:a) : null;
+  const fraca = validas.length? validas.reduce((a,b)=>b.v<a.v?b:a) : null;
+  const nv = nivel(geralMed);
+
+  let h = `<div class="kpis">
+    <div class="kpi" style="--k:var(--azul2)"><div class="v">${lista.length}</div><div class="l">${f?"Respondente selecionado":"Respondentes"}</div></div>
+    <div class="kpi" style="--k:${nv.c}"><div class="v">${fmt(geralMed)}</div><div class="l">Índice geral de maturidade · <strong>${nv.n}</strong></div></div>
+    <div class="kpi" style="--k:var(--n3)"><div class="v" style="font-size:1.1rem">${forte?forte.s.curto:"–"}</div><div class="l">Dimensão mais avançada ${forte?"("+fmt(forte.v)+")":""}</div></div>
+    <div class="kpi" style="--k:var(--n0)"><div class="v" style="font-size:1.1rem">${fraca?fraca.s.curto:"–"}</div><div class="l">Dimensão mais frágil ${fraca?"("+fmt(fraca.v)+")":""}</div></div>
+  </div>`;
+
+  // barras por dimensão
+  h += `<div class="card"><h2 class="tit">📈 Índice de maturidade por dimensão ${f?"(respondente selecionado)":"(média dos respondentes)"}</h2><div class="barras">` +
+    porSec.map(({s,v})=>`<div class="linha"><div>${s.id.slice(1)}. ${s.curto}</div>
+      <div class="trilho"><div style="width:${v??0}%;background:${s.cor}"></div></div><div class="val" style="color:${nivel(v).c}">${fmt(v)}</div></div>`).join("") +
+    `</div><div class="legenda"><span style="--c:var(--n0)">Incipiente (&lt;25%)</span><span style="--c:#f08c00">Inicial (25–50%)</span><span style="--c:#5c940d">Intermediário (50–75%)</span><span style="--c:var(--n3)">Avançado (≥75%)</span></div>
+    <p style="font-size:.8rem;color:var(--sub);margin-bottom:0">Índice = média das notas (0 a 3) ÷ 3 × 100, desconsiderando respostas “N/A”.</p></div>`;
+
+  // matriz respondentes x dimensões
+  if(!f){
+    h += `<div class="card"><h2 class="tit">🧩 Matriz respondentes × dimensões</h2><div class="scroll"><table><thead><tr><th>Respondente</th>${SECOES.map(s=>`<th title="${esc(s.titulo)}">${s.id.slice(1)}. ${s.curto}</th>`).join("")}<th>Geral</th></tr></thead><tbody>` +
+      calc.map(c=>`<tr><td><strong>${esc(c.r.respondente_nome)}</strong><br><small style="color:var(--sub)">${new Date(c.r.created_at).toLocaleString("pt-BR")}</small></td>${
+        SECOES.map(s=>{const v=c.idx[s.id]; const n=nivel(v); return `<td class="cel" style="background:color-mix(in srgb,${n.c} 22%,#fff);color:${n.c}">${fmt(v)}</td>`;}).join("")
+      }<td class="cel" style="background:${nivel(c.geral).c};color:#fff">${fmt(c.geral)}</td></tr>`).join("") +
+      `</tbody></table></div></div>`;
+  }
+
+  // distribuição por questão
+  let nq=0;
+  h += `<div class="card"><h2 class="tit">🔎 Distribuição das respostas por questão</h2><div class="scroll"><table><thead><tr><th>#</th><th>Questão</th>${ESCALA.map(e=>`<th style="text-align:center"><span class="pill" style="background:${e.c}">${e.t}</span></th>`).join("")}<th style="text-align:center">Média</th></tr></thead><tbody>`;
+  SECOES.forEach(s=>{
+    h += `<tr><td colspan="${ESCALA.length+3}" style="background:${s.cor};color:#fff;font-weight:700">${s.id.slice(1)}. ${esc(s.titulo)}</td></tr>`;
+    s.qs.forEach((q,j)=>{
+      nq++; const k=`${s.id}_q${j+1}`;
+      const vals = lista.map(r=>(r.respostas_escala||{})[k]).filter(v=>v!==undefined);
+      const cont = ESCALA.map(e=>vals.filter(v=>String(v)===e.v).length);
+      const nums = vals.filter(v=>v!=="NA").map(Number);
+      const med = nums.length? nums.reduce((a,b)=>a+b,0)/nums.length : null;
+      h += `<tr><td><span class="pill" style="background:${s.cor}">Q${nq}</span></td><td><strong>${q[0]}</strong></td>${cont.map((c,i)=>`<td style="text-align:center;${c?`font-weight:800;color:${ESCALA[i].c}`:"color:#ccc"}">${c}</td>`).join("")}
+        <td style="text-align:center;font-weight:800;color:${nivel(med===null?null:med/3*100).c}">${med===null?"–":med.toFixed(2).replace(".",",")}</td></tr>`;
+    });
+  });
+  h += `</tbody></table></div></div>`;
+
+  // fichas individuais
+  h += `<h2 class="tit" style="margin-top:26px">👤 Respostas por respondente</h2>`;
+  calc.forEach((c,ci)=>{
+    const r=c.r, n=nivel(c.geral);
+    h += `<div class="card resp ${f||ci===0&&calc.length===1?"aberto":""}" style="border-left-color:${n.c}">
+      <div class="resp-cab" onclick="this.parentElement.classList.toggle('aberto')">
+        <div><h3><span class="seta">▶</span> ${esc(r.respondente_nome)}</h3>
+          <div class="meta">📅 ${new Date(r.created_at).toLocaleString("pt-BR")}${r.respondente_funcao?" · 💼 "+esc(r.respondente_funcao):""}${r.respondente_email?" · ✉️ "+esc(r.respondente_email):""}</div></div>
+        <span class="selo" style="background:${n.c}">${fmt(c.geral)} · ${n.n}</span>
+      </div><div class="resp-corpo">`;
+    let qn=0;
+    SECOES.forEach(s=>{
+      h += `<div class="sec-res" style="background:${s.cor}"><span>${s.id.slice(1)}. ${esc(s.titulo)}</span><span>${fmt(c.idx[s.id])}</span></div><table><tbody>`;
+      s.qs.forEach((q,j)=>{ qn++; const v=(r.respostas_escala||{})[`${s.id}_q${j+1}`];
+        const e=ESCALA.find(x=>x.v===String(v));
+        h += `<tr><td style="width:52px"><span class="pill" style="background:${s.cor}">Q${qn}</span></td><td><strong>${q[0]}</strong></td><td style="width:220px"><span class="pill" style="background:${corValor(v)}">${rotuloValor(v)}</span> <small>${e?e.r:"Sem resposta"}</small></td></tr>`; });
+      h += `</tbody></table>`;
+      s.abertas.forEach((a,k)=>{ const t=(r.respostas_abertas||{})[`${s.id}_${ABERTA_CHAVES[k]}`];
+        h += `<div class="aberta"><b>${k===0?"💡 Iniciativas":"⚠️ Desafios / gargalos"}</b>${t?esc(t):'<span style="color:#aaa">Não informado</span>'}</div>`; });
+    });
+    h += `</div></div>`;
+  });
+  $("#resultados").innerHTML = h;
+}
+
+/* ==================== EXPORTAÇÃO CSV ==================== */
+function exportarCSV(){
+  if(!dados||!dados.length){ toast("Não há dados para exportar."); return; }
+  const cab = ["id","data_hora","unidade","nome","email","funcao","indice_geral"];
+  SECOES.forEach(s=>cab.push("indice_"+s.id));
+  let qn=0; SECOES.forEach(s=>s.qs.forEach((q,j)=>{ qn++; cab.push(`Q${qn} ${q[0]}`); }));
+  SECOES.forEach(s=>ABERTA_CHAVES.forEach(k=>cab.push(`${s.id}_${k}`)));
+  const csvEsc = v => `"${String(v??"").replace(/"/g,'""')}"`;
+  const linhas = dados.map(r=>{
+    const c = idxDe(r);
+    const l=[r.id, new Date(r.created_at).toLocaleString("pt-BR"), r.unidade, r.respondente_nome, r.respondente_email, r.respondente_funcao, c.geral];
+    SECOES.forEach(s=>l.push(c.idx[s.id]));
+    SECOES.forEach(s=>s.qs.forEach((q,j)=>l.push((r.respostas_escala||{})[`${s.id}_q${j+1}`])));
+    SECOES.forEach(s=>ABERTA_CHAVES.forEach(k=>l.push((r.respostas_abertas||{})[`${s.id}_${k}`])));
+    return l.map(csvEsc).join(";");
+  });
+  const blob = new Blob(["﻿"+[cab.map(csvEsc).join(";"),...linhas].join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="diagnostico_ciencia_aberta_cnpmf.csv"; a.click();
+}
+
+/* ==================== ABAS ==================== */
+function irAba(a){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("ativa",t.dataset.aba===a));
+  $("#aba-form").style.display = a==="form"?"":"none";
+  $("#aba-res").style.display  = a==="res"?"":"none";
+  if(a==="res" && !dados) carregarResultados();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>irAba(t.dataset.aba));
+montarFormulario();
+</script>
+</body>
+</html>
